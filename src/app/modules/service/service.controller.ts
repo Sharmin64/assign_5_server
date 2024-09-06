@@ -4,8 +4,13 @@ import catchAsync from "../../utils/catchAsync";
 import { ServicingService } from "./service.service";
 import serviceValidationSchema from "./service.validation";
 import sendResponse from "../../utils/sendResponse";
-import mongoose from "mongoose";
+import mongoose, { AnyObject } from "mongoose";
+import { Service } from "./service.model";
+import { Document } from "mongoose";
+import { IService, TCustomResponse } from "./service.interface";
 
+export type ServiceDocument = Document<unknown, {}, IService> &
+  IService & { _id: unknown };
 const createService = catchAsync(async (req, res, next) => {
   const serviceRawData = await req.body;
   const validateData = await serviceValidationSchema.parseAsync(serviceRawData);
@@ -47,17 +52,40 @@ const getSingleService = catchAsync(async (req, res, next) => {
   });
 });
 const getAllServices = catchAsync(async (req, res, next) => {
-  const result = await ServicingService.getAllServicesFromDB();
+  const { name, price, duration, sortBy, limit = 10, page = 1 } = req.query;
+
+  const filter: AnyObject = {};
+  if (name) filter.name = { $regex: name, $options: "i" };
+  if (price) filter.price = price;
+  if (duration) filter.duration = duration;
+
+  const sort: AnyObject = {};
+  if (sortBy) sort[sortBy as string] = 1;
+
+  const skip = (Number(page) - 1) * Number(limit);
+  // const result = await ServicingService.getAllServicesFromDB
+  const result = await Service.find(filter)
+    .sort(sort)
+    .limit(Number(limit))
+    .skip(skip);
+  const totalCount = await Service.countDocuments(filter);
   if (!result) {
     return next(new AppError(httpStatus.NOT_FOUND, "No Data Found"));
   }
 
-  sendResponse(res, {
+  const response: TCustomResponse<ServiceDocument[]> = {
     statusCode: httpStatus.OK,
     success: true,
     message: "Services retrieved successfully",
     data: result,
-  });
+    pagination: {
+      total: totalCount,
+      limit: Number(limit),
+      page: Number(page),
+    },
+  };
+
+  sendResponse(res, response);
 });
 
 const updateService = catchAsync(async (req, res, next) => {

@@ -1,4 +1,3 @@
-// import { PartialService } from "./service.interface";
 import { AnyObject } from "mongoose";
 import { Service } from "./service.model";
 import { PartialService } from "./service.interface";

@@ -26,6 +26,7 @@ const userSchema: Schema<IUser, UserModel> = new Schema(
       type: String,
       enum: ["admin", "user"],
       required: [true, "Role must be required"],
+      default: "user",
     },
     address: {
       type: String,
